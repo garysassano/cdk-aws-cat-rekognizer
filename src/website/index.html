@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cat Rekognizer</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .drag-drop-box {
+        cursor: pointer;
+        color: #6c757d;
+        transition: background-color 0.2s ease-in-out;
+        height: 300px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        border: 2px dashed #dee2e6;
+        position: relative;
+      }
+      .drag-drop-box:hover {
+        background-color: #f8f9fa;
+      }
+      #file_name,
+      #drag_drop_text {
+        color: #495057;
+      }
+      #upload_button {
+        background-color: #198754;
+        border-color: #198754;
+      }
+      #upload_button:hover {
+        background-color: #157347;
+        border-color: #157347;
+      }
+    </style>
+  </head>
+  <body class="bg-light">
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Cat Rekognizer</h5>
+            </div>
+            <div class="card-body">
+              <input type="file" id="file_input" hidden />
+              <div
+                id="drag_drop_area"
+                class="drag-drop-box rounded bg-white p-4 mb-3"
+                onclick="triggerFileInput()"
+              >
+                <div id="drag_drop_text" class="text-center">
+                  Drag and Drop Images Here or Click to Browse
+                </div>
+              </div>
+              <div id="file_name" class="text-muted mb-3"></div>
+              <button id="upload_button" class="btn btn-success w-100" disabled>
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let selectedFile = null;
+      let apiEndpointUrl = null;
+
+      fetch("config.json")
+        .then((response) => response.json())
+        .then((config) => {
+          apiEndpointUrl = config.apiEndpointUrl;
+        })
+        .catch((error) => {
+          console.error("Error loading configuration:", error);
+        });
+
+      document
+        .getElementById("file_input")
+        .addEventListener("change", handleFileSelect, false);
+      document
+        .getElementById("drag_drop_area")
+        .addEventListener("drop", handleDrop, false);
+      document
+        .getElementById("drag_drop_area")
+        .addEventListener("dragover", handleDragOver, false);
+
+      function triggerFileInput() {
+        document.getElementById("file_input").click();
+      }
+
+      function handleDragOver(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      }
+
+      function handleDrop(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        const files = event.dataTransfer.files;
+        selectedFile = files[0];
+        processFile(selectedFile);
+        previewImage(selectedFile);
+      }
+
+      function handleFileSelect(event) {
+        selectedFile = event.target.files[0];
+        processFile(selectedFile);
+        previewImage(selectedFile);
+      }
+
+      function processFile(file) {
+        document.getElementById("file_name").textContent =
+          `Selected file: ${file.name}`;
+        document.getElementById("upload_button").disabled = false;
+        document.getElementById("drag_drop_text").style.display = "none";
+      }
+
+      function previewImage(file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const preview = document.getElementById("drag_drop_area");
+          preview.style.backgroundImage = `url(${e.target.result})`;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      async function uploadToS3(file) {
+        const response = await fetch(`${apiEndpointUrl}/upload`, {
+          method: "POST",
+          body: JSON.stringify({ filename: file.name }),
+        });
+        const data = await response.json();
+        const presignedUrl = data.uploadUrl;
+
+        const uploadResponse = await fetch(presignedUrl, {
+          method: "PUT",
+          body: file,
+        });
+
+        if (uploadResponse.ok) {
+          alert("File uploaded successfully.");
+        } else {
+          alert("File upload failed.");
+        }
+      }
+
+      document
+        .getElementById("upload_button")
+        .addEventListener("click", async () => {
+          if (selectedFile) {
+            uploadToS3(selectedFile).catch((error) => {
+              console.error("Error uploading file:", error);
+              alert("Error uploading file.");
+            });
+          }
+        });
+    </script>
+  </body>
+</html>
