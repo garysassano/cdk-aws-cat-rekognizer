@@ -1,0 +1,34 @@
+.drag-drop-box {
+  cursor: pointer;
+  color: #6c757d;
+  transition: background-color 0.2s ease-in-out;
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 2px dashed #dee2e6;
+  position: relative;
+}
+
+.drag-drop-box:hover {
+  background-color: #f8f9fa;
+}
+
+#file_name,
+#drag_drop_text {
+  color: #495057;
+}
+
+#upload_button {
+  background-color: #198754;
+  border-color: #198754;
+}
+
+#upload_button:hover {
+  background-color: #157347;
+  border-color: #157347;
+}
