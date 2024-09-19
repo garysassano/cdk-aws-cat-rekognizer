@@ -1,3 +1,6 @@
+import { IdempotencyConfig } from "@aws-lambda-powertools/idempotency";
+import { DynamoDBPersistenceLayer } from "@aws-lambda-powertools/idempotency/dynamodb";
+import { makeHandlerIdempotent } from "@aws-lambda-powertools/idempotency/middleware";
 import {
   DynamoDBClient,
   PutItemCommand,
@@ -11,18 +14,41 @@ import {
 import { S3Client, GetObjectAttributesCommand } from "@aws-sdk/client-s3";
 import middy from "@middy/core";
 import eventNormalizer from "@middy/event-normalizer";
-import { S3EventRecord, S3Handler } from "aws-lambda";
+import { S3Event, S3EventRecord } from "aws-lambda";
 
 const rekognitionClient = new RekognitionClient();
 const ddbClient = new DynamoDBClient();
 const s3Client = new S3Client();
 const tableName = process.env.REKOGNITION_TABLE_NAME;
 
-const lambdaHandler: S3Handler = async (event) => {
+const idempotencyTableName = process.env.IDEMPOTENCY_TABLE_NAME;
+if (!idempotencyTableName) {
+  throw new Error("IDEMPOTENCY_TABLE_NAME env var is required");
+}
+const persistenceStore = new DynamoDBPersistenceLayer({
+  tableName: idempotencyTableName,
+  awsSdkV3Client: ddbClient,
+});
+const idempotencyConfig = new IdempotencyConfig({
+  eventKeyJmesPath: "Records[0].s3.object.eTag",
+  throwOnNoIdempotencyKey: true,
+  expiresAfterSeconds: 60 * 60 * 2, // 2 hours
+});
+
+const lambdaHandler = async (event: S3Event) => {
   await Promise.all(event.Records.map(processRecord));
+
+  return true;
 };
 
-export const handler = middy(lambdaHandler).use(eventNormalizer());
+export const handler = middy(lambdaHandler)
+  .use(
+    makeHandlerIdempotent({
+      persistenceStore,
+      config: idempotencyConfig,
+    }),
+  )
+  .use(eventNormalizer());
 
 async function processRecord(record: S3EventRecord) {
   const bucketName = record.s3.bucket.name;

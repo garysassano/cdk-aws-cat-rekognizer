@@ -9,6 +9,7 @@ import {
 import { HttpApi, HttpMethod } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { Distribution, PriceClass } from "aws-cdk-lib/aws-cloudfront";
+import { S3BucketOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { TableV2, AttributeType } from "aws-cdk-lib/aws-dynamodb";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { Architecture, Runtime, LoggingFormat } from "aws-cdk-lib/aws-lambda";
@@ -16,7 +17,6 @@ import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Bucket, EventType, HttpMethods } from "aws-cdk-lib/aws-s3";
 import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
-import { S3BucketOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { Construct } from "constructs";
 
 export class MyStack extends Stack {
@@ -65,7 +65,16 @@ export class MyStack extends Stack {
     const rekognitionTable = new TableV2(this, "RekognitionTable", {
       tableName: `rekognition-table-${uniqueId}`,
       partitionKey: { name: "ObjectETag", type: AttributeType.STRING },
-      sortKey: { name: "S3Url", type: AttributeType.STRING },
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    // DynamoDB table for idempotency
+    const idempotencyTable = new TableV2(this, "IdempotencyTable", {
+      partitionKey: {
+        name: "id",
+        type: AttributeType.STRING,
+      },
+      timeToLiveAttribute: "expiration",
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
@@ -80,6 +89,7 @@ export class MyStack extends Stack {
       loggingFormat: LoggingFormat.JSON,
       environment: {
         REKOGNITION_TABLE_NAME: rekognitionTable.tableName,
+        IDEMPOTENCY_TABLE_NAME: idempotencyTable.tableName,
       },
     });
 

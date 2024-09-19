@@ -211,13 +211,13 @@
       },
       "steps": [
         {
-          "exec": "pnpm dlx npm-check-updates@16 --upgrade --target=minor --peer --dep=dev,peer,prod,optional --filter=@types/jest,esbuild,eslint-config-prettier,eslint-import-resolver-typescript,eslint-plugin-import,eslint-plugin-prettier,jest,prettier,projen,ts-jest,ts-node,typescript,@aws-sdk/client-dynamodb,@aws-sdk/client-rekognition,@aws-sdk/client-s3,@aws-sdk/client-ssm,@aws-sdk/s3-request-presigner,@middy/core,@middy/event-normalizer,@types/aws-lambda"
+          "exec": "pnpm dlx npm-check-updates@16 --upgrade --target=minor --peer --dep=dev,peer,prod,optional --filter=@types/jest,esbuild,eslint-config-prettier,eslint-import-resolver-typescript,eslint-plugin-import,eslint-plugin-prettier,jest,prettier,projen,ts-jest,ts-node,typescript,@aws-lambda-powertools/idempotency,@aws-lambda-powertools/logger,@aws-sdk/client-dynamodb,@aws-sdk/client-rekognition,@aws-sdk/client-s3,@aws-sdk/client-ssm,@aws-sdk/s3-request-presigner,@middy/core,@middy/event-normalizer,@types/aws-lambda"
         },
         {
           "exec": "pnpm i --no-frozen-lockfile"
         },
         {
-          "exec": "pnpm update @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser aws-cdk esbuild eslint-config-prettier eslint-import-resolver-typescript eslint-plugin-import eslint-plugin-prettier eslint jest jest-junit prettier projen ts-jest ts-node typescript @aws-sdk/client-dynamodb @aws-sdk/client-rekognition @aws-sdk/client-s3 @aws-sdk/client-ssm @aws-sdk/s3-request-presigner @middy/core @middy/event-normalizer @types/aws-lambda aws-cdk-lib constructs"
+          "exec": "pnpm update @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser aws-cdk esbuild eslint-config-prettier eslint-import-resolver-typescript eslint-plugin-import eslint-plugin-prettier eslint jest jest-junit prettier projen ts-jest ts-node typescript @aws-lambda-powertools/idempotency @aws-lambda-powertools/logger @aws-sdk/client-dynamodb @aws-sdk/client-rekognition @aws-sdk/client-s3 @aws-sdk/client-ssm @aws-sdk/s3-request-presigner @middy/core @middy/event-normalizer @types/aws-lambda aws-cdk-lib constructs"
         },
         {
           "exec": "npx projen"

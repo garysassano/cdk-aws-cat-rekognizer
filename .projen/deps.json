@@ -79,6 +79,14 @@
       "type": "build"
     },
     {
+      "name": "@aws-lambda-powertools/idempotency",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-lambda-powertools/logger",
+      "type": "runtime"
+    },
+    {
       "name": "@aws-sdk/client-dynamodb",
       "type": "runtime"
     },
