@@ -96,6 +96,7 @@ export class MyStack extends Stack {
     // Grant permissions to processor Lambda function
     rekognitionBucket.grantRead(processorLambda);
     rekognitionTable.grantReadWriteData(processorLambda);
+    idempotencyTable.grantReadWriteData(processorLambda);
     processorLambda.addToRolePolicy(
       new PolicyStatement({
         actions: ["rekognition:DetectLabels"],
