@@ -36,9 +36,14 @@ const idempotencyConfig = new IdempotencyConfig({
 });
 
 const lambdaHandler = async (event: S3Event) => {
-  await Promise.all(event.Records.map(processRecord));
+  // When triggered by an S3 event, Lambda is guaranteed to receive only one record per invocation
+  await processRecord(event.Records[0]);
 
-  return true;
+  const bucketName = event.Records[0].s3.bucket.name;
+  const objectKey = event.Records[0].s3.object.key;
+  const s3Url = `https://${bucketName}.s3.amazonaws.com/${objectKey}`;
+
+  return s3Url;
 };
 
 export const handler = middy(lambdaHandler)
