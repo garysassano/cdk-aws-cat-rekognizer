@@ -32,12 +32,12 @@ const persistenceStore = new DynamoDBPersistenceLayer({
 const idempotencyConfig = new IdempotencyConfig({
   eventKeyJmesPath: "Records[0].s3.object.eTag",
   throwOnNoIdempotencyKey: true,
-  expiresAfterSeconds: 60 * 60 * 2, // 2 hours
+  expiresAfterSeconds: 10,
 });
 
 const lambdaHandler = async (event: S3Event) => {
   // When triggered by an S3 event, Lambda is guaranteed to receive only one record per invocation
-  await processRecord(event.Records[0]);
+  // await processRecord(event.Records[0]);
 
   const bucketName = event.Records[0].s3.bucket.name;
   const objectKey = event.Records[0].s3.object.key;
