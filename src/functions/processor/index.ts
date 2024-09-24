@@ -8,6 +8,7 @@ import {
 } from "@aws-sdk/client-rekognition";
 import middy from "@middy/core";
 import eventNormalizer from "@middy/event-normalizer";
+import { Duration } from "aws-cdk-lib";
 import { S3Event } from "aws-lambda";
 
 // Initialize AWS clients
@@ -28,9 +29,9 @@ const persistenceStore = new DynamoDBPersistenceLayer({
 
 // Configure idempotency settings
 const idempotencyConfig = new IdempotencyConfig({
-  eventKeyJmesPath: "Records[0].s3.object.eTag", // Use S3 object ETag as the idempotency key
-  throwOnNoIdempotencyKey: true, // Throw an error if no idempotency key is found
-  expiresAfterSeconds: 3600 * 24 * 365, // Set 1 year TTL for idempotency table records
+  eventKeyJmesPath: "Records[0].s3.object.eTag",
+  throwOnNoIdempotencyKey: true,
+  expiresAfterSeconds: Duration.days(365 * 100).toSeconds(),
 });
 
 const lambdaHandler = async (event: S3Event) => {
