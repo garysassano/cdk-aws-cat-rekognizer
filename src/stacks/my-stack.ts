@@ -61,15 +61,9 @@ export class MyStack extends Stack {
       ],
     });
 
-    // DynamoDB table for storing results of lambda processor
-    const rekognitionTable = new TableV2(this, "RekognitionTable", {
-      tableName: `rekognition-table-${uniqueId}`,
-      partitionKey: { name: "ObjectETag", type: AttributeType.STRING },
-      removalPolicy: RemovalPolicy.DESTROY,
-    });
-
     // DynamoDB table for idempotency
     const idempotencyTable = new TableV2(this, "IdempotencyTable", {
+      tableName: `idempotency-table-${uniqueId}`,
       partitionKey: {
         name: "id",
         type: AttributeType.STRING,
@@ -88,14 +82,12 @@ export class MyStack extends Stack {
       memorySize: 1024,
       loggingFormat: LoggingFormat.JSON,
       environment: {
-        REKOGNITION_TABLE_NAME: rekognitionTable.tableName,
         IDEMPOTENCY_TABLE_NAME: idempotencyTable.tableName,
       },
     });
 
     // Grant permissions to processor Lambda function
     rekognitionBucket.grantRead(processorLambda);
-    rekognitionTable.grantReadWriteData(processorLambda);
     idempotencyTable.grantReadWriteData(processorLambda);
     processorLambda.addToRolePolicy(
       new PolicyStatement({
