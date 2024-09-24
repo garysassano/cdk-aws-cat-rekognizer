@@ -74,7 +74,7 @@ export class MyStack extends Stack {
         name: "id",
         type: AttributeType.STRING,
       },
-      // timeToLiveAttribute: "expiration",
+      timeToLiveAttribute: "expiration",
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
