@@ -15,7 +15,7 @@ import { S3Event } from "aws-lambda";
 const rekognitionClient = new RekognitionClient();
 const ddbClient = new DynamoDBClient();
 
-// Retrieve and validate the idempotency table name from environment variables
+// Retrieve and validate the idempotency table name from env vars
 const idempotencyTableName = process.env.IDEMPOTENCY_TABLE_NAME;
 if (!idempotencyTableName) {
   throw new Error("IDEMPOTENCY_TABLE_NAME env var is required.");
