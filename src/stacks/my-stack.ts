@@ -113,13 +113,11 @@ export class MyStack extends Stack {
       loggingFormat: LoggingFormat.JSON,
       environment: {
         REKOGNITION_BUCKET_NAME: rekognitionBucket.bucketName,
-        REKOGNITION_TABLE_NAME: rekognitionTable.tableName,
       },
     });
 
     // Grant permissions to http Lambda function
     rekognitionBucket.grantPut(httpLambda);
-    rekognitionTable.grantReadData(httpLambda);
 
     // Create an HTTP API with CORS enabled
     const httpApi = new HttpApi(this, "HttpApi", {
