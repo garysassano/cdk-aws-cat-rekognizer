@@ -1,154 +1,75 @@
 import { IdempotencyConfig } from "@aws-lambda-powertools/idempotency";
 import { DynamoDBPersistenceLayer } from "@aws-lambda-powertools/idempotency/dynamodb";
 import { makeHandlerIdempotent } from "@aws-lambda-powertools/idempotency/middleware";
-import {
-  DynamoDBClient,
-  PutItemCommand,
-  QueryCommandOutput,
-  QueryCommand,
-} from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   RekognitionClient,
   DetectLabelsCommand,
 } from "@aws-sdk/client-rekognition";
-import { S3Client, GetObjectAttributesCommand } from "@aws-sdk/client-s3";
 import middy from "@middy/core";
 import eventNormalizer from "@middy/event-normalizer";
-import { S3Event, S3EventRecord } from "aws-lambda";
+import { S3Event } from "aws-lambda";
 
+// Initialize AWS clients
 const rekognitionClient = new RekognitionClient();
 const ddbClient = new DynamoDBClient();
-const s3Client = new S3Client();
-const tableName = process.env.REKOGNITION_TABLE_NAME;
 
+// Get the DynamoDB table name for idempotency from environment variables
 const idempotencyTableName = process.env.IDEMPOTENCY_TABLE_NAME;
 if (!idempotencyTableName) {
-  throw new Error("IDEMPOTENCY_TABLE_NAME env var is required");
+  throw new Error("IDEMPOTENCY_TABLE_NAME env var is required.");
 }
+
+// Set up the persistence layer for idempotency using DynamoDB
 const persistenceStore = new DynamoDBPersistenceLayer({
   tableName: idempotencyTableName,
   awsSdkV3Client: ddbClient,
 });
+
+// Configure idempotency settings
 const idempotencyConfig = new IdempotencyConfig({
-  eventKeyJmesPath: "Records[0].s3.object.eTag",
-  throwOnNoIdempotencyKey: true,
-  expiresAfterSeconds: 10,
+  eventKeyJmesPath: "Records[0].s3.object.eTag", // Use S3 object ETag as the idempotency key
+  throwOnNoIdempotencyKey: true, // Throw an error if no idempotency key is found
+  expiresAfterSeconds: 0, // This setting won't take effect as there's no TTL attribute set in DynamoDB
 });
 
+// Note: The idempotency records will never expire automatically because the DynamoDB table
+// doesn't have a TTL attribute configured. You may need to implement a cleanup strategy
+// or set up TTL in the table if you want old records to be automatically removed.
+
+// Main Lambda handler function
 const lambdaHandler = async (event: S3Event) => {
-  // When triggered by an S3 event, Lambda is guaranteed to receive only one record per invocation
-  // await processRecord(event.Records[0]);
-
-  const bucketName = event.Records[0].s3.bucket.name;
-  const objectKey = event.Records[0].s3.object.key;
-  const s3Url = `https://${bucketName}.s3.amazonaws.com/${objectKey}`;
-
-  return s3Url;
-};
-
-export const handler = middy(lambdaHandler)
-  .use(
-    makeHandlerIdempotent({
-      persistenceStore,
-      config: idempotencyConfig,
-    }),
-  )
-  .use(eventNormalizer());
-
-async function processRecord(record: S3EventRecord) {
+  // Extract relevant information from the S3 event
+  const record = event.Records[0];
   const bucketName = record.s3.bucket.name;
   const objectKey = record.s3.object.key;
   const s3Url = `https://${bucketName}.s3.amazonaws.com/${objectKey}`;
 
-  try {
-    const objectETag = await getObjectETag(bucketName, objectKey);
-    if (!objectETag) {
-      console.error("ETag not found for object:", objectKey);
-      return;
-    }
+  // Check if the image contains a cat
+  const isCat = await imageContainsCat(bucketName, objectKey);
 
-    const isCat = await getIsCatValue(objectETag, bucketName, objectKey);
-    await saveRecordToDb(objectETag, s3Url, isCat);
-  } catch (error) {
-    console.error(`Error processing record: ${error}`, record);
-  }
-}
+  // Return the S3 URL and whether the image contains a cat
+  return { s3Url, isCat };
+};
 
-async function getIsCatValue(
-  objectETag: string,
-  bucketName: string,
-  objectKey: string,
-): Promise<boolean> {
-  // Query DynamoDB to check if the ETag already exists
-  const queryResponse = await queryByETag(objectETag);
-
-  if (queryResponse.Items && queryResponse.Items.length > 0) {
-    console.log(
-      "ETag already exists in DynamoDB, using IsCat value from a previous record",
-    );
-    // Return the IsCat value from the DynamoDB item
-    return queryResponse.Items[0].IsCat.BOOL!;
-  } else {
-    // If the ETag does not exist, invoke Rekognition
-    return imageContainsCat(bucketName, objectKey);
-  }
-}
-
-async function queryByETag(objectETag: string): Promise<QueryCommandOutput> {
-  const queryCommand = new QueryCommand({
-    TableName: tableName,
-    KeyConditionExpression: "ObjectETag = :etag",
-    ExpressionAttributeValues: {
-      ":etag": { S: objectETag },
-    },
-  });
-
-  return ddbClient.send(queryCommand);
-}
-
-async function getObjectETag(
-  bucketName: string,
-  objectKey: string,
-): Promise<string | undefined> {
-  const getObjectAttributesCommand = new GetObjectAttributesCommand({
-    Bucket: bucketName,
-    Key: objectKey,
-    ObjectAttributes: ["ETag"],
-  });
-
-  const s3Response = await s3Client.send(getObjectAttributesCommand);
-  return s3Response.ETag;
-}
-
+// Function to detect if an image contains a cat using Amazon Rekognition
 async function imageContainsCat(
   bucketName: string,
   objectKey: string,
 ): Promise<boolean> {
-  const detectLabelsCommand = new DetectLabelsCommand({
-    Image: { S3Object: { Bucket: bucketName, Name: objectKey } },
-    MaxLabels: 10,
-  });
-
-  const rekognitionResponse = await rekognitionClient.send(detectLabelsCommand);
-  return (
-    rekognitionResponse.Labels?.some((label) => label.Name === "Cat") || false
+  // Send a request to Rekognition to detect labels in the image
+  const { Labels } = await rekognitionClient.send(
+    new DetectLabelsCommand({
+      Image: { S3Object: { Bucket: bucketName, Name: objectKey } },
+      MaxLabels: 10, // Limit the number of labels to improve performance
+    }),
   );
+
+  // Check if any of the detected labels is "Cat"
+  return Labels?.some((label) => label.Name === "Cat") || false;
 }
 
-async function saveRecordToDb(
-  objectETag: string,
-  s3Url: string,
-  isCat: boolean,
-): Promise<void> {
-  const putItemCommand = new PutItemCommand({
-    TableName: tableName,
-    Item: {
-      ObjectETag: { S: objectETag },
-      S3Url: { S: s3Url },
-      IsCat: { BOOL: isCat },
-    },
-  });
-
-  await ddbClient.send(putItemCommand);
-  console.log(JSON.stringify({ objectETag, s3Url, isCat }));
-}
+// Export the handler with middleware for idempotency and event normalization
+export const handler = middy(lambdaHandler)
+  .use(makeHandlerIdempotent({ persistenceStore, config: idempotencyConfig }))
+  .use(eventNormalizer());
