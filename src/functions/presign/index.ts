@@ -2,6 +2,7 @@ import { Logger } from "@aws-lambda-powertools/logger";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
+  AllTopics,
   AuthClient,
   CredentialProvider,
   DisposableTokenScopes,
@@ -38,7 +39,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
   // Generate Momento disposable token
   const tokenResponse = await authClient.generateDisposableToken(
-    DisposableTokenScopes.cacheKeyReadWrite("squirrels", "mo"),
+    DisposableTokenScopes.topicPublishSubscribe("rekognition-cache", AllTopics),
     ExpiresIn.minutes(30),
   );
 
