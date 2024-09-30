@@ -72,12 +72,21 @@
     </div>
 
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1386.0.min.js"></script>
+    <!-- Use your local bundled version of Momento SDK -->
     <script src="./dist/bundle.js"></script>
     <script>
       let selectedFile = null;
       let apiEndpointUrl = null;
       let momentoClient = null;
       let momentoToken = null;
+
+      // Wait for the SDK to load
+      window.onload = function () {
+        console.log("Momento SDK loaded:", window.Momento);
+        if (!window.Momento) {
+          console.error("Momento SDK failed to load");
+        }
+      };
 
       fetch("config.json")
         .then((response) => response.json())
@@ -161,10 +170,14 @@
           });
 
           // Initialize Momento client
-          momentoClient = new momento.TopicClient({
-            configuration: momento.Configurations.Laptop.v1(),
+          if (typeof window.Momento === "undefined") {
+            throw new Error("Momento SDK not loaded");
+          }
+
+          momentoClient = new window.Momento.TopicClient({
+            configuration: window.Momento.Configurations.Laptop.v1(),
             credentialProvider:
-              momento.CredentialProvider.fromString(momentoToken),
+              window.Momento.CredentialProvider.fromString(momentoToken),
           });
 
           console.log("Initialized Momento client");
