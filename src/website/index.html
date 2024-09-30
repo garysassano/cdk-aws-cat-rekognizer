@@ -71,9 +71,13 @@
       </div>
     </div>
 
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1386.0.min.js"></script>
+    <script src="./dist/bundle.js"></script>
     <script>
       let selectedFile = null;
       let apiEndpointUrl = null;
+      let momentoClient = null;
+      let momentoToken = null;
 
       fetch("config.json")
         .then((response) => response.json())
@@ -136,22 +140,80 @@
       }
 
       async function uploadToS3(file) {
-        const response = await fetch(`${apiEndpointUrl}/upload`, {
-          method: "POST",
-          body: JSON.stringify({ filename: file.name }),
-        });
-        const data = await response.json();
-        const presignedUrl = data.uploadUrl;
+        try {
+          // Get presigned URL and Momento token
+          const response = await fetch(`${apiEndpointUrl}/upload`, {
+            method: "POST",
+            body: JSON.stringify({ filename: file.name }),
+          });
 
-        const uploadResponse = await fetch(presignedUrl, {
-          method: "PUT",
-          body: file,
-        });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
 
-        if (uploadResponse.ok) {
-          alert("File uploaded successfully.");
-        } else {
-          alert("File upload failed.");
+          const data = await response.json();
+          const presignedUrl = data.uploadUrl;
+          const momentoToken = data.momentoToken;
+
+          console.log("Received presigned URL and Momento token", {
+            presignedUrl,
+            momentoToken,
+          });
+
+          // Initialize Momento client
+          momentoClient = new momento.TopicClient({
+            configuration: momento.Configurations.Laptop.v1(),
+            credentialProvider:
+              momento.CredentialProvider.fromString(momentoToken),
+          });
+
+          console.log("Initialized Momento client");
+
+          // Subscribe to Momento topic
+          const subscribeResponse = await momentoClient.subscribe(
+            "rekognizer-cache",
+            file.name,
+            {
+              onItem: (item) => {
+                console.log("Received item:", item);
+                alert(`Rekognition results: ${item.value()}`);
+              },
+              onError: (error) => {
+                console.error("Subscription error:", error);
+              },
+            },
+          );
+
+          if (subscribeResponse.type !== "Success") {
+            throw new Error(
+              `Failed to subscribe to topic: ${subscribeResponse.toString()}`,
+            );
+          }
+
+          console.log("Successfully subscribed to Momento topic");
+
+          // Upload file to S3 with Momento token as metadata
+          const uploadResponse = await fetch(presignedUrl, {
+            method: "PUT",
+            body: file,
+            headers: {
+              "x-amz-meta-momento-token": momentoToken,
+            },
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error(
+              `Upload failed with status: ${uploadResponse.status}`,
+            );
+          }
+
+          console.log("File uploaded successfully");
+          alert(
+            "File uploaded successfully. Waiting for Rekognition results...",
+          );
+        } catch (error) {
+          console.error("Error in uploadToS3:", error);
+          alert(`Error uploading file: ${error.message}`);
         }
       }
 
