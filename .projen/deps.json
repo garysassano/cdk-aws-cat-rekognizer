@@ -79,6 +79,10 @@
       "type": "build"
     },
     {
+      "name": "@aws-lambda-powertools/logger",
+      "type": "runtime"
+    },
+    {
       "name": "@aws-sdk/client-dynamodb",
       "type": "runtime"
     },
@@ -96,6 +100,10 @@
     },
     {
       "name": "@aws-sdk/s3-request-presigner",
+      "type": "runtime"
+    },
+    {
+      "name": "@gomomento/sdk",
       "type": "runtime"
     },
     {

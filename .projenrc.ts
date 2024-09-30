@@ -21,6 +21,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     "@types/aws-lambda",
     "@middy/core",
     "@middy/event-normalizer",
+    "@gomomento/sdk",
+    "@aws-lambda-powertools/logger",
   ],
 });
 

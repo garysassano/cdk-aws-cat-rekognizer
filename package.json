@@ -44,11 +44,13 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
+    "@aws-lambda-powertools/logger": "^2.8.0",
     "@aws-sdk/client-dynamodb": "^3.616.0",
     "@aws-sdk/client-rekognition": "^3.616.0",
     "@aws-sdk/client-s3": "^3.616.0",
     "@aws-sdk/client-ssm": "^3.616.0",
     "@aws-sdk/s3-request-presigner": "^3.616.0",
+    "@gomomento/sdk": "^1.98.1",
     "@middy/core": "^5.4.5",
     "@middy/event-normalizer": "^5.4.5",
     "@types/aws-lambda": "^8.10.141",
