@@ -39,7 +39,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
   // Generate Momento disposable token
   const tokenResponse = await authClient.generateDisposableToken(
-    DisposableTokenScopes.topicPublishSubscribe("rekognition-cache", AllTopics),
+    DisposableTokenScopes.topicPublishSubscribe("rekognizer-cache", AllTopics),
     ExpiresIn.minutes(30),
   );
 
